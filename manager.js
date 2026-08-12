@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 
 const C = require('./lib/common');
+const { platform: PLAT } = require('./lib/platform');
 const { installOfficialUpdate, officialUpdateStatus } = require('./lib/official-update');
 const {
   config, ROOT, TYPELESS_EXE, USERDATA_DIR, ASAR_PATH, IS_MAC,
@@ -339,7 +340,8 @@ const server = http.createServer(async (req, res) => {
         if (IS_MAC) {
           appBackup = createTypelessAppBackup('paywall-patch');
         } else {
-          fs.copyFileSync(ASAR_PATH, rollbackAsar);
+          // Windows Electron 宿主会劫持 *.asar 的 fs 读写，必须 copyRaw。
+          PLAT.copyRaw(ASAR_PATH, rollbackAsar);
           fs.copyFileSync(TYPELESS_EXE, rollbackExe);
         }
         operationPhase = '修改付费墙与 Electron 完整性配置';
@@ -357,7 +359,7 @@ const server = http.createServer(async (req, res) => {
           if (IS_MAC) {
             if (appBackup) restoreTypelessAppBackup(appBackup);
           } else {
-            if (rollbackAsar && fs.existsSync(rollbackAsar)) fs.copyFileSync(rollbackAsar, ASAR_PATH);
+            if (rollbackAsar && fs.existsSync(rollbackAsar)) PLAT.copyRaw(rollbackAsar, ASAR_PATH);
             if (rollbackExe && fs.existsSync(rollbackExe)) fs.copyFileSync(rollbackExe, TYPELESS_EXE);
           }
         } catch (restoreError) {
